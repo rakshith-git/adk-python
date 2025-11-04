@@ -220,8 +220,19 @@ class OpenMemoryService(BaseMemoryService):
           
           memories_added += 1
           logger.debug("Added memory for event %s", event.id)
+        except httpx.HTTPStatusError as e:
+          logger.error(
+              "Failed to add memory for event %s due to HTTP error: %s - %s",
+              event.id,
+              e.response.status_code,
+              e.response.text,
+          )
+        except httpx.RequestError as e:
+          logger.error(
+              "Failed to add memory for event %s due to request error: %s", event.id, e
+          )
         except Exception as e:
-          logger.error("Failed to add memory for event %s: %s", event.id, e)
+          logger.error("Failed to add memory for event %s due to unexpected error: %s", event.id, e)
 
     logger.info(
         "Added %d memories from session %s", memories_added, session.id
@@ -355,8 +366,18 @@ class OpenMemoryService(BaseMemoryService):
       logger.info("Found %d memories for query: '%s'", len(memories), query)
       return SearchMemoryResponse(memories=memories)
 
+    except httpx.HTTPStatusError as e:
+      logger.error(
+          "Failed to search memories due to HTTP error: %s - %s",
+          e.response.status_code,
+          e.response.text,
+      )
+      return SearchMemoryResponse(memories=[])
+    except httpx.RequestError as e:
+      logger.error("Failed to search memories due to request error: %s", e)
+      return SearchMemoryResponse(memories=[])
     except Exception as e:
-      logger.error("Failed to search memories: %s", e)
+      logger.error("Failed to search memories due to unexpected error: %s", e)
       return SearchMemoryResponse(memories=[])
 
   async def close(self):
