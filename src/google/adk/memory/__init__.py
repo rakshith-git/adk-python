@@ -35,3 +35,18 @@ except ImportError:
       ' VertexAiRagMemoryService please install it. If not, you can ignore this'
       ' warning.'
   )
+
+try:
+  from .open_memory_service import (
+      OpenMemoryService,
+      OpenMemoryServiceConfig,
+  )
+
+  __all__.append('OpenMemoryService')
+  __all__.append('OpenMemoryServiceConfig')
+except ImportError:
+  logger.debug(
+      'httpx is not installed. If you want to use the OpenMemoryService'
+      ' please install it via "pip install google-adk[openmemory]".'
+      ' If not, you can ignore this warning.'
+  )
