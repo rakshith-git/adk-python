@@ -237,15 +237,22 @@ def _register_builtin_services(registry: ServiceRegistry) -> None:
     parsed = urlparse(uri)
     
     # Extract base URL
-    # The netloc contains the host:port, and path may contain additional path
-    # If path looks like a full URL (starts with //), use it
-    # Otherwise, construct http://<netloc><path>
+    # Handle different URI formats:
+    # - openmemory://localhost:3000 -> http://localhost:3000
+    # - openmemory://https://example.com -> https://example.com
+    # - openmemory://http://localhost:3000 -> http://localhost:3000
     netloc = parsed.netloc or ""
     path = parsed.path
     
-    # Check if path contains a full URL (e.g., openmemory://http://localhost:3000)
-    if path.startswith("//"):
-      # Extract the URL from path (e.g., //http://localhost:3000 -> http://localhost:3000)
+    # Check if netloc is a scheme (e.g., "https:" or "http:")
+    # This happens when URI is like openmemory://https://example.com
+    if netloc.endswith(":") and path.startswith("//"):
+      # Reconstruct the full URL: scheme from netloc + path
+      scheme = netloc.rstrip(":")
+      # path is like "//example.com", we want "https://example.com"
+      base_url = f"{scheme}://{path[2:]}"  # Remove "//" prefix
+    elif path.startswith("//"):
+      # Path contains a full URL (e.g., openmemory:////http://localhost:3000)
       full_url = path.lstrip("/")
       if full_url.startswith(("http://", "https://")):
         base_url = full_url
@@ -255,13 +262,13 @@ def _register_builtin_services(registry: ServiceRegistry) -> None:
       # Netloc itself is a full URL (shouldn't happen with proper URL parsing, but handle it)
       base_url = netloc
     else:
-      # Construct URL from netloc and path
+      # Construct URL from netloc and path (default case)
       if netloc:
         base_url = f"http://{netloc}{path}"
       else:
         raise ValueError(
             f"Invalid OpenMemory URI: {uri}. Expected format:"
-            " openmemory://localhost:3000 or openmemory://http://localhost:3000"
+            " openmemory://localhost:3000 or openmemory://https://example.com"
         )
     
     # Extract API key from query parameters if present
