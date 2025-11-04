@@ -152,10 +152,9 @@ class OpenMemoryService(BaseMemoryService):
         "event_id": event.id,
         "invocation_id": event.invocation_id,
         "author": event.author,
-        "timestamp": timestamp_str,
+        "timestamp": event.timestamp,
         "source": "adk_session"
     }
-    metadata = {k: v for k, v in metadata.items() if v is not None}
     
     memory_data = {
         "content": enriched_content,
@@ -186,19 +185,21 @@ class OpenMemoryService(BaseMemoryService):
     """
     memories_added = 0
 
-    headers = {"Content-Type": "application/json"}
-    if self._api_key:
-      headers["Authorization"] = f"Bearer {self._api_key}"
+    for event in session.events:
+      content_text = _extract_text_from_event(event)
+      if not content_text:
+        continue
 
-    async with httpx.AsyncClient(timeout=self._config.timeout) as http_client:
-      for event in session.events:
-        content_text = _extract_text_from_event(event)
-        if not content_text:
-          continue
+      memory_data = self._prepare_memory_data(event, content_text, session)
 
-        memory_data = self._prepare_memory_data(event, content_text, session)
-
-        try:
+      try:
+        # Use direct HTTP to pass user_id as top-level field (not just in metadata)
+        # This ensures server-side filtering works correctly
+        async with httpx.AsyncClient(timeout=self._config.timeout) as http_client:
+          headers = {"Content-Type": "application/json"}
+          if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+          
           # Include user_id as separate field for database storage and filtering
           payload = {
               "content": memory_data["content"],
@@ -207,18 +208,18 @@ class OpenMemoryService(BaseMemoryService):
               "salience": memory_data.get("salience", 0.5),
               "user_id": session.user_id  # Separate field for DB column
           }
-
+          
           response = await http_client.post(
               f"{self._base_url}/memory/add",
               json=payload,
               headers=headers
           )
           response.raise_for_status()
-
-          memories_added += 1
-          logger.debug("Added memory for event %s", event.id)
-        except Exception as e:
-          logger.error("Failed to add memory for event %s: %s", event.id, e)
+        
+        memories_added += 1
+        logger.debug("Added memory for event %s", event.id)
+      except Exception as e:
+        logger.error("Failed to add memory for event %s: %s", event.id, e)
 
     logger.info(
         "Added %d memories from session %s", memories_added, session.id
