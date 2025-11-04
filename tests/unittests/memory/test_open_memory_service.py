@@ -266,9 +266,9 @@ class TestOpenMemoryService:
     call_args = mock_httpx_client.post.call_args
     request_data = call_args.kwargs['json']
     assert request_data['query'] == 'Python programming'
-    assert request_data['top_k'] == 10
-    assert request_data['filters']['user_id'] == MOCK_USER_ID
-    assert request_data['filters']['app_name'] == MOCK_APP_NAME
+    assert request_data['k'] == 10
+    assert request_data['filter']['user_id'] == MOCK_USER_ID
+    assert request_data['filter']['tags'] == [f'app:{MOCK_APP_NAME}']
 
     # Verify results (content should be cleaned of metadata prefix)
     assert len(result.memories) == 2
