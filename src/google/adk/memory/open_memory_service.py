@@ -359,6 +359,15 @@ class OpenMemoryService(BaseMemoryService):
       logger.error("Failed to search memories: %s", e)
       return SearchMemoryResponse(memories=[])
 
+  async def close(self):
+    """Close the memory service and cleanup resources.
+    
+    This method is provided for API consistency. Since httpx.AsyncClient
+    is used as a context manager in all operations, cleanup is handled
+    automatically. This method is a no-op and can be safely called or omitted.
+    """
+    pass
+
 
 class OpenMemoryServiceConfig(BaseModel):
   """Configuration for OpenMemory service behavior.

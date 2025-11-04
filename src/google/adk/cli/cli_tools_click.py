@@ -898,7 +898,10 @@ def adk_services_options():
             - Use 'agentengine://<agent_engine>' to connect to Agent Engine
               sessions. <agent_engine> can either be the full qualified resource
               name 'projects/abc/locations/us-central1/reasoningEngines/123' or
-              the resource id '123'."""),
+              the resource id '123'.
+            - Use 'openmemory://<host>:<port>' to connect to OpenMemory.
+              Example: 'openmemory://localhost:3000' or
+              'openmemory://localhost:3000?api_key=secret'."""),
         default=None,
     )
     @functools.wraps(func)

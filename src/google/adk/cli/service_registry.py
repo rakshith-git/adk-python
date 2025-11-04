@@ -18,6 +18,7 @@ import os
 from typing import Any
 from typing import Dict
 from typing import Protocol
+from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
 from ..artifacts.base_artifact_service import BaseArtifactService
@@ -210,8 +211,70 @@ def _register_builtin_services(registry: ServiceRegistry) -> None:
     )
     return VertexAiMemoryBankService(**params)
 
+  def openmemory_factory(uri: str, **kwargs):
+    """Factory for OpenMemory service from URI.
+    
+    Supported URI formats:
+    - openmemory://localhost:3000 -> http://localhost:3000
+    - openmemory://https://example.com -> https://example.com
+    - openmemory://localhost:3000?api_key=secret -> http://localhost:3000 with API key
+    
+    Args:
+        uri: URI in format openmemory://<host>:<port> or openmemory://<full_url>
+        **kwargs: Additional arguments (agents_dir is ignored)
+    
+    Returns:
+        OpenMemoryService instance
+    """
+    try:
+      from ..memory.open_memory_service import OpenMemoryService
+    except ImportError:
+      raise ImportError(
+          "OpenMemoryService requires httpx. Install it with:"
+          " pip install google-adk[openmemory]"
+      )
+
+    parsed = urlparse(uri)
+    
+    # Extract base URL
+    # The netloc contains the host:port, and path may contain additional path
+    # If path looks like a full URL (starts with //), use it
+    # Otherwise, construct http://<netloc><path>
+    netloc = parsed.netloc or ""
+    path = parsed.path
+    
+    # Check if path contains a full URL (e.g., openmemory://http://localhost:3000)
+    if path.startswith("//"):
+      # Extract the URL from path (e.g., //http://localhost:3000 -> http://localhost:3000)
+      full_url = path.lstrip("/")
+      if full_url.startswith(("http://", "https://")):
+        base_url = full_url
+      else:
+        base_url = f"http://{full_url}"
+    elif netloc.startswith(("http://", "https://")):
+      # Netloc itself is a full URL (shouldn't happen with proper URL parsing, but handle it)
+      base_url = netloc
+    else:
+      # Construct URL from netloc and path
+      if netloc:
+        base_url = f"http://{netloc}{path}"
+      else:
+        raise ValueError(
+            f"Invalid OpenMemory URI: {uri}. Expected format:"
+            " openmemory://localhost:3000 or openmemory://http://localhost:3000"
+        )
+    
+    # Extract API key from query parameters if present
+    api_key = None
+    if parsed.query:
+      query_params = parse_qs(parsed.query)
+      api_key = query_params.get("api_key", [None])[0]
+    
+    return OpenMemoryService(base_url=base_url, api_key=api_key)
+
   registry.register_memory_service("rag", rag_memory_factory)
   registry.register_memory_service("agentengine", agentengine_memory_factory)
+  registry.register_memory_service("openmemory", openmemory_factory)
 
 
 # Global registry instance
