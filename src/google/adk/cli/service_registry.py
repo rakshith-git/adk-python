@@ -237,39 +237,22 @@ def _register_builtin_services(registry: ServiceRegistry) -> None:
     parsed = urlparse(uri)
     
     # Extract base URL
-    # Handle different URI formats:
-    # - openmemory://localhost:3000 -> http://localhost:3000
-    # - openmemory://https://example.com -> https://example.com
-    # - openmemory://http://localhost:3000 -> http://localhost:3000
-    netloc = parsed.netloc or ""
-    path = parsed.path
+    # The part after "openmemory://"
+    location_part = uri[len("openmemory://"):]
     
-    # Check if netloc is a scheme (e.g., "https:" or "http:")
-    # This happens when URI is like openmemory://https://example.com
-    if netloc.endswith(":") and path.startswith("//"):
-      # Reconstruct the full URL: scheme from netloc + path
-      scheme = netloc.rstrip(":")
-      # path is like "//example.com", we want "https://example.com"
-      base_url = f"{scheme}://{path[2:]}"  # Remove "//" prefix
-    elif path.startswith("//"):
-      # Path contains a full URL (e.g., openmemory:////http://localhost:3000)
-      full_url = path.lstrip("/")
-      if full_url.startswith(("http://", "https://")):
-        base_url = full_url
-      else:
-        base_url = f"http://{full_url}"
-    elif netloc.startswith(("http://", "https://")):
-      # Netloc itself is a full URL (shouldn't happen with proper URL parsing, but handle it)
-      base_url = netloc
+    # Remove query string for base_url construction
+    base_url_part = location_part.split('?')[0].rstrip('/')
+
+    if not base_url_part:
+      raise ValueError(
+          f"Invalid OpenMemory URI: {uri}. Expected format:"
+          " openmemory://localhost:3000 or openmemory://https://example.com"
+      )
+
+    if not base_url_part.startswith(("http://", "https://")):
+      base_url = f"http://{base_url_part}"
     else:
-      # Construct URL from netloc and path (default case)
-      if netloc:
-        base_url = f"http://{netloc}{path}"
-      else:
-        raise ValueError(
-            f"Invalid OpenMemory URI: {uri}. Expected format:"
-            " openmemory://localhost:3000 or openmemory://https://example.com"
-        )
+      base_url = base_url_part
     
     # Extract API key from query parameters if present
     api_key = None

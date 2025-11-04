@@ -163,13 +163,13 @@ class OpenMemoryService(BaseMemoryService):
     }
 
     if self._config.enable_metadata_tags:
-      memory_data["tags"] = [
+      tags = [
           f"session:{session.id}",
           f"app:{session.app_name}",
-          f"author:{event.author}" if event.author else None
       ]
-      # Remove None values
-      memory_data["tags"] = [t for t in memory_data["tags"] if t]
+      if event.author:
+        tags.append(f"author:{event.author}")
+      memory_data["tags"] = tags
 
     return memory_data
 
