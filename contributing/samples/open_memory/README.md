@@ -64,7 +64,7 @@ OPENMEMORY_BASE_URL=http://localhost:3000
 
 ```python
 from google.adk.memory import OpenMemoryService
-from google.adk.runners import InMemoryRunner
+from google.adk.runners import Runner
 
 # Create OpenMemory service with defaults
 memory_service = OpenMemoryService(
@@ -72,7 +72,7 @@ memory_service = OpenMemoryService(
 )
 
 # Use with runner
-runner = InMemoryRunner(
+runner = Runner(
     app_name="my_app",
     agent=my_agent,
     memory_service=memory_service

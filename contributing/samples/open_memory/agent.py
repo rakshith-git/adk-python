@@ -30,10 +30,10 @@ root_agent = Agent(
     name='open_memory_agent',
     description='agent that has access to memory tools with OpenMemory.',
     before_agent_callback=update_current_time,
-    instruction="""\
-                You are an agent that help user answer questions. You have access to memory tools.
-                You can use the memory tools to look up the information in the memory. Current time: {_time}
-                """,
+    instruction=(
+        'You are an agent that help user answer questions. You have access to memory tools.\n'
+        'You can use the memory tools to look up the information in the memory. Current time: {_time}'
+    ),
     tools=[load_memory_tool, preload_memory_tool],
 )
 
